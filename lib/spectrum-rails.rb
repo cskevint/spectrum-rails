@@ -2,6 +2,7 @@ require "spectrum-rails/version"
 
 module Spectrum
   module Rails
-    # Your code goes here...
+    class Engine < ::Rails::Engine
+    end
   end
 end
