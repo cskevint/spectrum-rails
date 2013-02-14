@@ -19,7 +19,9 @@ Or install it yourself as:
 
     $ gem install spectrum-rails
 
-NOTE: this is a jQuery plugin so you will also need the `jquery-rails` gem.
+NOTE: this is a jQuery plugin so you will also need the `jquery-rails` gem:
+
+* https://github.com/rails/jquery-rails
 
 ## Usage
 
