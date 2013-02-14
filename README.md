@@ -1,6 +1,9 @@
 # Spectrum::Rails
 
-TODO: Write a gem description
+A ruby gem that uses the Rails asset pipeline to include the Spectrum jQuery plugin by Brian Grinstead (@bgrins):
+
+* Homepage: http://bgrins.github.com/spectrum/
+* Source Code: https://github.com/bgrins/spectrum
 
 ## Installation
 
@@ -16,9 +19,17 @@ Or install it yourself as:
 
     $ gem install spectrum-rails
 
+NOTE: this is a jQuery plugin so you will also need the `jquery-rails` gem.
+
 ## Usage
 
-TODO: Write usage instructions here
+In your `application.js` you will need to add this line:
+
+    //= require spectrum
+   
+And in your `application.css` you will need to add this line:
+
+    *= require spectrum
 
 ## Contributing
 
