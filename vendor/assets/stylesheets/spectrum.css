@@ -1,5 +1,5 @@
 /***
-Spectrum Colorpicker v1.0.9
+Spectrum Colorpicker v1.1.1
 https://github.com/bgrins/spectrum
 Author: Brian Grinstead
 License: MIT
@@ -177,6 +177,10 @@ License: MIT
 .sp-6 {
     height:17%;
     filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff00ff', endColorstr='#ff0000');
+}
+
+.sp-hidden {
+    display: none !important;
 }
 
 /* Clearfix hack */
