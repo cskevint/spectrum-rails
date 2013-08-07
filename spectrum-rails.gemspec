@@ -16,4 +16,5 @@ Gem::Specification.new do |gem|
   gem.version       = Spectrum::Rails::VERSION
   
   gem.add_dependency "railties", ">= 3.1"
+  gem.license = 'MIT'
 end
