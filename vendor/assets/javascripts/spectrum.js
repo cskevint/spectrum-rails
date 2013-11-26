@@ -1,4 +1,4 @@
-// Spectrum Colorpicker v1.1.1
+// Spectrum Colorpicker v1.1.2+
 // https://github.com/bgrins/spectrum
 // Author: Brian Grinstead
 // License: MIT
@@ -6,110 +6,119 @@
 (function (window, $, undefined) {
     var defaultOpts = {
 
-        // Callbacks
-        beforeShow: noop,
-        move: noop,
-        change: noop,
-        show: noop,
-        hide: noop,
+            // Callbacks
+            beforeShow: noop,
+            move: noop,
+            change: noop,
+            show: noop,
+            hide: noop,
 
-        // Options
-        color: false,
-        flat: false,
-        showInput: false,
-        showButtons: true,
-        clickoutFiresChange: false,
-        showInitial: false,
-        showPalette: false,
-        showPaletteOnly: false,
-        showSelectionPalette: true,
-        localStorageKey: false,
-        appendTo: "body",
-        maxSelectionSize: 7,
-        cancelText: "cancel",
-        chooseText: "choose",
-        preferredFormat: false,
-        className: "",
-        showAlpha: false,
-        theme: "sp-light",
-        palette: ['fff', '000'],
-        selectionPalette: [],
-        disabled: false
-    },
-    spectrums = [],
-    IE = !!/msie/i.exec( window.navigator.userAgent ),
-    rgbaSupport = (function() {
-        function contains( str, substr ) {
-            return !!~('' + str).indexOf(substr);
-        }
+            // Options
+            color: false,
+            flat: false,
+            showInput: false,
+            allowEmpty: false,
+            showButtons: true,
+            clickoutFiresChange: false,
+            showInitial: false,
+            showPalette: false,
+            showPaletteOnly: false,
+            showSelectionPalette: true,
+            localStorageKey: false,
+            appendTo: "body",
+            maxSelectionSize: 7,
+            cancelText: "cancel",
+            chooseText: "choose",
+            preferredFormat: false,
+            className: "",
+            showAlpha: false,
+            theme: "sp-light",
+            palette: ['fff', '000'],
+            selectionPalette: [],
+            disabled: false
+        },
+        spectrums = [],
+        IE = !!/msie/i.exec( window.navigator.userAgent ),
+        rgbaSupport = (function() {
+            function contains( str, substr ) {
+                return !!~('' + str).indexOf(substr);
+            }
 
-        var elem = document.createElement('div');
-        var style = elem.style;
-        style.cssText = 'background-color:rgba(0,0,0,.5)';
-        return contains(style.backgroundColor, 'rgba') || contains(style.backgroundColor, 'hsla');
-    })(),
-    replaceInput = [
-        "<div class='sp-replacer'>",
+            var elem = document.createElement('div');
+            var style = elem.style;
+            style.cssText = 'background-color:rgba(0,0,0,.5)';
+            return contains(style.backgroundColor, 'rgba') || contains(style.backgroundColor, 'hsla');
+        })(),
+        replaceInput = [
+            "<div class='sp-replacer'>",
             "<div class='sp-preview'><div class='sp-preview-inner'></div></div>",
             "<div class='sp-dd'>&#9660;</div>",
-        "</div>"
-    ].join(''),
-    markup = (function () {
+            "</div>"
+        ].join(''),
+        markup = (function () {
 
-        // IE does not support gradients with multiple stops, so we need to simulate
-        //  that for the rainbow slider with 8 divs that each have a single gradient
-        var gradientFix = "";
-        if (IE) {
-            for (var i = 1; i <= 6; i++) {
-                gradientFix += "<div class='sp-" + i + "'></div>";
+            // IE does not support gradients with multiple stops, so we need to simulate
+            //  that for the rainbow slider with 8 divs that each have a single gradient
+            var gradientFix = "";
+            if (IE) {
+                for (var i = 1; i <= 6; i++) {
+                    gradientFix += "<div class='sp-" + i + "'></div>";
+                }
             }
-        }
 
-        return [
-            "<div class='sp-container sp-hidden'>",
+            return [
+                "<div class='sp-container sp-hidden'>",
                 "<div class='sp-palette-container'>",
-                    "<div class='sp-palette sp-thumb sp-cf'></div>",
+                "<div class='sp-palette sp-thumb sp-cf'></div>",
                 "</div>",
                 "<div class='sp-picker-container'>",
-                    "<div class='sp-top sp-cf'>",
-                        "<div class='sp-fill'></div>",
-                        "<div class='sp-top-inner'>",
-                            "<div class='sp-color'>",
-                                "<div class='sp-sat'>",
-                                    "<div class='sp-val'>",
-                                        "<div class='sp-dragger'></div>",
-                                    "</div>",
-                                "</div>",
-                            "</div>",
-                            "<div class='sp-hue'>",
-                                "<div class='sp-slider'></div>",
-                                gradientFix,
-                            "</div>",
-                        "</div>",
-                        "<div class='sp-alpha'><div class='sp-alpha-inner'><div class='sp-alpha-handle'></div></div></div>",
-                    "</div>",
-                    "<div class='sp-input-container sp-cf'>",
-                        "<input class='sp-input' type='text' spellcheck='false'  />",
-                    "</div>",
-                    "<div class='sp-initial sp-thumb sp-cf'></div>",
-                    "<div class='sp-button-container sp-cf'>",
-                        "<a class='sp-cancel' href='#'></a>",
-                        "<button class='sp-choose'></button>",
-                    "</div>",
+                "<div class='sp-top sp-cf'>",
+                "<div class='sp-fill'></div>",
+                "<div class='sp-top-inner'>",
+                "<div class='sp-color'>",
+                "<div class='sp-sat'>",
+                "<div class='sp-val'>",
+                "<div class='sp-dragger'></div>",
                 "</div>",
-            "</div>"
-        ].join("");
-    })();
+                "</div>",
+                "</div>",
+                "<div class='sp-clear sp-clear-display' title='Clear Color Selection'>",
+                "</div>",
+                "<div class='sp-hue'>",
+                "<div class='sp-slider'></div>",
+                gradientFix,
+                "</div>",
+                "</div>",
+                "<div class='sp-alpha'><div class='sp-alpha-inner'><div class='sp-alpha-handle'></div></div></div>",
+                "</div>",
+                "<div class='sp-input-container sp-cf'>",
+                "<input class='sp-input' type='text' spellcheck='false'  />",
+                "</div>",
+                "<div class='sp-initial sp-thumb sp-cf'></div>",
+                "<div class='sp-button-container sp-cf'>",
+                "<a class='sp-cancel' href='#'></a>",
+                "<button class='sp-choose'></button>",
+                "</div>",
+                "</div>",
+                "</div>"
+            ].join("");
+        })();
 
     function paletteTemplate (p, color, className) {
         var html = [];
         for (var i = 0; i < p.length; i++) {
-            var tiny = tinycolor(p[i]);
-            var c = tiny.toHsl().l < 0.5 ? "sp-thumb-el sp-thumb-dark" : "sp-thumb-el sp-thumb-light";
-            c += (tinycolor.equals(color, p[i])) ? " sp-thumb-active" : "";
+            var current = p[i];
+            if(current) {
+                var tiny = tinycolor(current);
+                var c = tiny.toHsl().l < 0.5 ? "sp-thumb-el sp-thumb-dark" : "sp-thumb-el sp-thumb-light";
+                c += (tinycolor.equals(color, current)) ? " sp-thumb-active" : "";
 
-            var swatchStyle = rgbaSupport ? ("background-color:" + tiny.toRgbString()) : "filter:" + tiny.toFilter();
-            html.push('<span title="' + tiny.toRgbString() + '" data-color="' + tiny.toRgbString() + '" class="' + c + '"><span class="sp-thumb-inner" style="' + swatchStyle + ';" /></span>');
+                var swatchStyle = rgbaSupport ? ("background-color:" + tiny.toRgbString()) : "filter:" + tiny.toFilter();
+                html.push('<span title="' + tiny.toRgbString() + '" data-color="' + tiny.toRgbString() + '" class="' + c + '"><span class="sp-thumb-inner" style="' + swatchStyle + ';" /></span>');
+            } else {
+                var cls = 'sp-clear-display';
+                html.push('<span title="No Color Selected" data-color="" style="background-color:transparent;" class="' + cls + '"></span>');
+            }
         }
         return "<div class='sp-cf " + className + "'>" + html.join('') + "</div>";
     }
@@ -180,6 +189,7 @@
             paletteContainer = container.find(".sp-palette"),
             initialColorContainer = container.find(".sp-initial"),
             cancelButton = container.find(".sp-cancel"),
+            clearButton = container.find(".sp-clear"),
             chooseButton = container.find(".sp-choose"),
             isInput = boundElement.is("input"),
             shouldReplace = isInput && !flat,
@@ -190,14 +200,21 @@
             colorOnShow = false,
             preferredFormat = opts.preferredFormat,
             currentPreferredFormat = preferredFormat,
-            clickoutFiresChange = !opts.showButtons || opts.clickoutFiresChange;
+            clickoutFiresChange = !opts.showButtons || opts.clickoutFiresChange,
+            isEmpty = !initialColor,
+            allowEmpty = opts.allowEmpty;
 
 
         function applyOptions() {
 
+            if (opts.showPaletteOnly) {
+                opts.showPalette = true;
+            }
+
             container.toggleClass("sp-flat", flat);
             container.toggleClass("sp-input-disabled", !opts.showInput);
             container.toggleClass("sp-alpha-enabled", opts.showAlpha);
+            container.toggleClass("sp-clear-enabled", opts.allowEmpty);
             container.toggleClass("sp-buttons-disabled", !opts.showButtons);
             container.toggleClass("sp-palette-disabled", !opts.showPalette);
             container.toggleClass("sp-palette-only", opts.showPaletteOnly);
@@ -217,6 +234,10 @@
 
             if (shouldReplace) {
                 boundElement.after(replacer).hide();
+            }
+
+            if (!allowEmpty) {
+                clearButton.hide();
             }
 
             if (flat) {
@@ -240,7 +261,7 @@
                     if (oldPalette.length > 1) {
                         delete window.localStorage[localStorageKey];
                         $.each(oldPalette, function(i, c) {
-                             addColorToSelectionPalette(c);
+                            addColorToSelectionPalette(c);
                         });
                     }
                 }
@@ -285,6 +306,21 @@
                 hide("cancel");
             });
 
+
+            clearButton.bind("click.spectrum", function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+
+                isEmpty = true;
+
+                move();
+                if(flat) {
+                    //for the flat style, this is a change event
+                    updateOriginalInput(true);
+                }
+            });
+
+
             chooseButton.text(opts.chooseText);
             chooseButton.bind("click.spectrum", function (e) {
                 e.stopPropagation();
@@ -298,6 +334,7 @@
 
             draggable(alphaSlider, function (dragX, dragY, e) {
                 currentAlpha = (dragX / alphaWidth);
+                isEmpty = false;
                 if (e.shiftKey) {
                     currentAlpha = Math.round(currentAlpha * 10) / 10;
                 }
@@ -307,6 +344,7 @@
 
             draggable(slider, function (dragX, dragY) {
                 currentHue = parseFloat(dragY / slideHeight);
+                isEmpty = false;
                 move();
             }, dragStart, dragStop);
 
@@ -333,6 +371,8 @@
                 if (setValue) {
                     currentValue = parseFloat((dragHeight - dragY) / dragHeight);
                 }
+
+                isEmpty = false;
 
                 move();
 
@@ -459,12 +499,20 @@
         }
 
         function setFromTextInput() {
-            var tiny = tinycolor(textInput.val());
-            if (tiny.ok) {
-                set(tiny);
+
+            var value = textInput.val();
+
+            if ((value === null || value === "") && allowEmpty) {
+                set(null);
             }
             else {
-                textInput.addClass("sp-validation-error");
+                var tiny = tinycolor(value);
+                if (tiny.ok) {
+                    set(tiny);
+                }
+                else {
+                    textInput.addClass("sp-validation-error");
+                }
             }
         }
 
@@ -551,23 +599,33 @@
                 return;
             }
 
-            var newColor = tinycolor(color);
-            var newHsv = newColor.toHsv();
+            var newColor;
+            if (!color && allowEmpty) {
+                isEmpty = true;
+            } else {
+                isEmpty = false;
+                newColor = tinycolor(color);
+                var newHsv = newColor.toHsv();
 
-            currentHue = (newHsv.h % 360) / 360;
-            currentSaturation = newHsv.s;
-            currentValue = newHsv.v;
-            currentAlpha = newHsv.a;
-
+                currentHue = (newHsv.h % 360) / 360;
+                currentSaturation = newHsv.s;
+                currentValue = newHsv.v;
+                currentAlpha = newHsv.a;
+            }
             updateUI();
 
-            if (newColor.ok && !ignoreFormatChange) {
+            if (newColor && newColor.ok && !ignoreFormatChange) {
                 currentPreferredFormat = preferredFormat || newColor.format;
             }
         }
 
         function get(opts) {
             opts = opts || { };
+
+            if (allowEmpty && isEmpty) {
+                return null;
+            }
+
             return tinycolor.fromRatio({
                 h: currentHue,
                 s: currentSaturation,
@@ -606,39 +664,51 @@
             }
 
             var realColor = get({ format: format }),
-                realHex = realColor.toHexString(),
-                realRgb = realColor.toRgbString();
+                displayColor = '';
 
-            // Update the replaced elements background color (with actual selected color)
-            if (rgbaSupport || realColor.alpha === 1) {
-                previewElement.css("background-color", realRgb);
+            //reset background info for preview element
+            previewElement.removeClass("sp-clear-display");
+            previewElement.css('background-color', 'transparent');
+
+            if (!realColor && allowEmpty) {
+                // Update the replaced elements background with icon indicating no color selection
+                previewElement.addClass("sp-clear-display");
             }
             else {
-                previewElement.css("background-color", "transparent");
-                previewElement.css("filter", realColor.toFilter());
-            }
+                var realHex = realColor.toHexString(),
+                    realRgb = realColor.toRgbString();
 
-            if (opts.showAlpha) {
-                var rgb = realColor.toRgb();
-                rgb.a = 0;
-                var realAlpha = tinycolor(rgb).toRgbString();
-                var gradient = "linear-gradient(left, " + realAlpha + ", " + realHex + ")";
-
-                if (IE) {
-                    alphaSliderInner.css("filter", tinycolor(realAlpha).toFilter({ gradientType: 1 }, realHex));
+                // Update the replaced elements background color (with actual selected color)
+                if (rgbaSupport || realColor.alpha === 1) {
+                    previewElement.css("background-color", realRgb);
                 }
                 else {
-                    alphaSliderInner.css("background", "-webkit-" + gradient);
-                    alphaSliderInner.css("background", "-moz-" + gradient);
-                    alphaSliderInner.css("background", "-ms-" + gradient);
-                    alphaSliderInner.css("background", gradient);
+                    previewElement.css("background-color", "transparent");
+                    previewElement.css("filter", realColor.toFilter());
                 }
+
+                if (opts.showAlpha) {
+                    var rgb = realColor.toRgb();
+                    rgb.a = 0;
+                    var realAlpha = tinycolor(rgb).toRgbString();
+                    var gradient = "linear-gradient(left, " + realAlpha + ", " + realHex + ")";
+
+                    if (IE) {
+                        alphaSliderInner.css("filter", tinycolor(realAlpha).toFilter({ gradientType: 1 }, realHex));
+                    }
+                    else {
+                        alphaSliderInner.css("background", "-webkit-" + gradient);
+                        alphaSliderInner.css("background", "-moz-" + gradient);
+                        alphaSliderInner.css("background", "-ms-" + gradient);
+                        alphaSliderInner.css("background", gradient);
+                    }
+                }
+
+                displayColor = realColor.toString(format);
             }
-
-
             // Update the text entry input as it changes happen
             if (opts.showInput) {
-                textInput.val(realColor.toString(format));
+                textInput.val(displayColor);
             }
 
             if (opts.showPalette) {
@@ -652,49 +722,67 @@
             var s = currentSaturation;
             var v = currentValue;
 
-            // Where to show the little circle in that displays your current selected color
-            var dragX = s * dragWidth;
-            var dragY = dragHeight - (v * dragHeight);
-            dragX = Math.max(
-                -dragHelperHeight,
-                Math.min(dragWidth - dragHelperHeight, dragX - dragHelperHeight)
-            );
-            dragY = Math.max(
-                -dragHelperHeight,
-                Math.min(dragHeight - dragHelperHeight, dragY - dragHelperHeight)
-            );
-            dragHelper.css({
-                "top": dragY,
-                "left": dragX
-            });
+            if(allowEmpty && isEmpty) {
+                //if selected color is empty, hide the helpers
+                alphaSlideHelper.hide();
+                slideHelper.hide();
+                dragHelper.hide();
+            }
+            else {
+                //make sure helpers are visible
+                alphaSlideHelper.show();
+                slideHelper.show();
+                dragHelper.show();
 
-            var alphaX = currentAlpha * alphaWidth;
-            alphaSlideHelper.css({
-                "left": alphaX - (alphaSlideHelperWidth / 2)
-            });
+                // Where to show the little circle in that displays your current selected color
+                var dragX = s * dragWidth;
+                var dragY = dragHeight - (v * dragHeight);
+                dragX = Math.max(
+                    -dragHelperHeight,
+                    Math.min(dragWidth - dragHelperHeight, dragX - dragHelperHeight)
+                );
+                dragY = Math.max(
+                    -dragHelperHeight,
+                    Math.min(dragHeight - dragHelperHeight, dragY - dragHelperHeight)
+                );
+                dragHelper.css({
+                    "top": dragY,
+                    "left": dragX
+                });
 
-            // Where to show the bar that displays your current selected hue
-            var slideY = (currentHue) * slideHeight;
-            slideHelper.css({
-                "top": slideY - slideHelperHeight
-            });
+                var alphaX = currentAlpha * alphaWidth;
+                alphaSlideHelper.css({
+                    "left": alphaX - (alphaSlideHelperWidth / 2)
+                });
+
+                // Where to show the bar that displays your current selected hue
+                var slideY = (currentHue) * slideHeight;
+                slideHelper.css({
+                    "top": slideY - slideHelperHeight
+                });
+            }
         }
 
         function updateOriginalInput(fireCallback) {
-            var color = get();
+            var color = get(),
+                displayColor = '',
+                hasChanged = !tinycolor.equals(color, colorOnShow);
 
-            if (isInput) {
-                boundElement.val(color.toString(currentPreferredFormat)).change();
+            if(color) {
+                displayColor = color.toString(currentPreferredFormat);
+                // Update the selection palette with the current color
+                addColorToSelectionPalette(color);
             }
 
-            var hasChanged = !tinycolor.equals(color, colorOnShow);
+            if (isInput) {
+                boundElement.val(displayColor);
+            }
+
             colorOnShow = color;
 
-            // Update the selection palette with the current color
-            addColorToSelectionPalette(color);
             if (fireCallback && hasChanged) {
                 callbacks.change(color);
-                boundElement.trigger('change.spectrum', [ color ]);
+                boundElement.trigger('change', [ color ]);
             }
         }
 
@@ -774,9 +862,9 @@
     }
 
     /**
-    * checkOffset - get the offset below/above and left/right element depending on screen position
-    * Thanks https://github.com/jquery/jquery-ui/blob/master/ui/jquery.ui.datepicker.js
-    */
+     * checkOffset - get the offset below/above and left/right element depending on screen position
+     * Thanks https://github.com/jquery/jquery-ui/blob/master/ui/jquery.ui.datepicker.js
+     */
     function getOffset(picker, input) {
         var extraY = 0;
         var dpWidth = picker.outerWidth();
@@ -791,33 +879,33 @@
 
         offset.left -=
             Math.min(offset.left, (offset.left + dpWidth > viewWidth && viewWidth > dpWidth) ?
-            Math.abs(offset.left + dpWidth - viewWidth) : 0);
+                Math.abs(offset.left + dpWidth - viewWidth) : 0);
 
         offset.top -=
             Math.min(offset.top, ((offset.top + dpHeight > viewHeight && viewHeight > dpHeight) ?
-            Math.abs(dpHeight + inputHeight - extraY) : extraY));
+                Math.abs(dpHeight + inputHeight - extraY) : extraY));
 
         return offset;
     }
 
     /**
-    * noop - do nothing
-    */
+     * noop - do nothing
+     */
     function noop() {
 
     }
 
     /**
-    * stopPropagation - makes the code only doing this a little easier to read in line
-    */
+     * stopPropagation - makes the code only doing this a little easier to read in line
+     */
     function stopPropagation(e) {
         e.stopPropagation();
     }
 
     /**
-    * Create a function bound to a given object
-    * Thanks to underscore.js
-    */
+     * Create a function bound to a given object
+     * Thanks to underscore.js
+     */
     function bind(func, obj) {
         var slice = Array.prototype.slice;
         var args = slice.call(arguments, 2);
@@ -827,9 +915,9 @@
     }
 
     /**
-    * Lightweight drag helper.  Handles containment within the element, so that
-    * when dragging, the x is within [0,element.width] and y is within [0,element.height]
-    */
+     * Lightweight drag helper.  Handles containment within the element, so that
+     * when dragging, the x is within [0,element.width] and y is within [0,element.height]
+     */
     function draggable(element, onmove, onstart, onstop) {
         onmove = onmove || function () { };
         onstart = onstart || function () { };
@@ -930,8 +1018,8 @@
     function log(){/* jshint -W021 */if(window.console){if(Function.prototype.bind)log=Function.prototype.bind.call(console.log,console);else log=function(){Function.prototype.apply.call(console.log,console,arguments);};log.apply(this,arguments);}}
 
     /**
-    * Define a jQuery plugin
-    */
+     * Define a jQuery plugin
+     */
     var dataID = "spectrum.id";
     $.fn.spectrum = function (opts, extra) {
 
@@ -997,11 +1085,12 @@
             });
         }
     };
-    // TinyColor v0.9.14
-    // https://github.com/bgrins/TinyColor
-    // 2013-02-24, Brian Grinstead, MIT License
 
-    (function(root) {
+    // TinyColor v0.9.16
+    // https://github.com/bgrins/TinyColor
+    // 2013-08-10, Brian Grinstead, MIT License
+
+    (function() {
 
         var trimLeft = /^[\s,#]+/,
             trimRight = /\s+$/,
@@ -1019,8 +1108,9 @@
 
             // If input is already a tinycolor, return itself
             if (typeof color == "object" && color.hasOwnProperty("_tc_id")) {
-               return color;
+                return color;
             }
+
             var rgb = inputToRGB(color);
             var r = rgb.r,
                 g = rgb.g,
@@ -1042,6 +1132,13 @@
                 format: format,
                 _tc_id: tinyCounter++,
                 alpha: a,
+                getAlpha: function() {
+                    return a;
+                },
+                setAlpha: function(value) {
+                    a = boundAlpha(value);
+                    roundA = mathRound(100*a) / 100;
+                },
                 toHsv: function() {
                     var hsv = rgbToHsv(r, g, b);
                     return { h: hsv.h * 360, s: hsv.s, v: hsv.v, a: a };
@@ -1050,8 +1147,8 @@
                     var hsv = rgbToHsv(r, g, b);
                     var h = mathRound(hsv.h * 360), s = mathRound(hsv.s * 100), v = mathRound(hsv.v * 100);
                     return (a == 1) ?
-                      "hsv("  + h + ", " + s + "%, " + v + "%)" :
-                      "hsva(" + h + ", " + s + "%, " + v + "%, "+ roundA + ")";
+                        "hsv("  + h + ", " + s + "%, " + v + "%)" :
+                        "hsva(" + h + ", " + s + "%, " + v + "%, "+ roundA + ")";
                 },
                 toHsl: function() {
                     var hsl = rgbToHsl(r, g, b);
@@ -1061,8 +1158,8 @@
                     var hsl = rgbToHsl(r, g, b);
                     var h = mathRound(hsl.h * 360), s = mathRound(hsl.s * 100), l = mathRound(hsl.l * 100);
                     return (a == 1) ?
-                      "hsl("  + h + ", " + s + "%, " + l + "%)" :
-                      "hsla(" + h + ", " + s + "%, " + l + "%, "+ roundA + ")";
+                        "hsl("  + h + ", " + s + "%, " + l + "%)" :
+                        "hsla(" + h + ", " + s + "%, " + l + "%, "+ roundA + ")";
                 },
                 toHex: function(allow3Char) {
                     return rgbToHex(r, g, b, allow3Char);
@@ -1075,18 +1172,22 @@
                 },
                 toRgbString: function() {
                     return (a == 1) ?
-                      "rgb("  + mathRound(r) + ", " + mathRound(g) + ", " + mathRound(b) + ")" :
-                      "rgba(" + mathRound(r) + ", " + mathRound(g) + ", " + mathRound(b) + ", " + roundA + ")";
+                        "rgb("  + mathRound(r) + ", " + mathRound(g) + ", " + mathRound(b) + ")" :
+                        "rgba(" + mathRound(r) + ", " + mathRound(g) + ", " + mathRound(b) + ", " + roundA + ")";
                 },
                 toPercentageRgb: function() {
                     return { r: mathRound(bound01(r, 255) * 100) + "%", g: mathRound(bound01(g, 255) * 100) + "%", b: mathRound(bound01(b, 255) * 100) + "%", a: a };
                 },
                 toPercentageRgbString: function() {
                     return (a == 1) ?
-                      "rgb("  + mathRound(bound01(r, 255) * 100) + "%, " + mathRound(bound01(g, 255) * 100) + "%, " + mathRound(bound01(b, 255) * 100) + "%)" :
-                      "rgba(" + mathRound(bound01(r, 255) * 100) + "%, " + mathRound(bound01(g, 255) * 100) + "%, " + mathRound(bound01(b, 255) * 100) + "%, " + roundA + ")";
+                        "rgb("  + mathRound(bound01(r, 255) * 100) + "%, " + mathRound(bound01(g, 255) * 100) + "%, " + mathRound(bound01(b, 255) * 100) + "%)" :
+                        "rgba(" + mathRound(bound01(r, 255) * 100) + "%, " + mathRound(bound01(g, 255) * 100) + "%, " + mathRound(bound01(b, 255) * 100) + "%, " + roundA + ")";
                 },
                 toName: function() {
+                    if (a === 0) {
+                        return "transparent";
+                    }
+
                     return hexNames[rgbToHex(r, g, b, true)] || false;
                 },
                 toFilter: function(secondColor) {
@@ -1105,8 +1206,13 @@
                     return "progid:DXImageTransform.Microsoft.gradient("+gradientType+"startColorstr=#" + pad2(alphaHex) + hex + ",endColorstr=#" + pad2(secondAlphaHex) + secondHex + ")";
                 },
                 toString: function(format) {
+                    var formatSet = !!format;
                     format = format || this.format;
+
                     var formattedString = false;
+                    var hasAlphaAndFormatNotSet = !formatSet && a < 1 && a > 0;
+                    var formatWithAlpha = hasAlphaAndFormatNotSet && (format === "hex" || format === "hex6" || format === "hex3" || format === "name");
+
                     if (format === "rgb") {
                         formattedString = this.toRgbString();
                     }
@@ -1127,6 +1233,10 @@
                     }
                     if (format === "hsv") {
                         formattedString = this.toHsvString();
+                    }
+
+                    if (formatWithAlpha) {
+                        return this.toRgbString();
                     }
 
                     return formattedString || this.toHexString();
@@ -1206,12 +1316,7 @@
                 }
             }
 
-            a = parseFloat(a);
-
-            // Handle invalid alpha characters by setting to 1
-            if (isNaN(a) || a < 0 || a > 1) {
-                a = 1;
-            }
+            a = boundAlpha(a);
 
             return {
                 ok: ok,
@@ -1222,7 +1327,6 @@
                 a: a
             };
         }
-
 
 
         // Conversion Functions
@@ -1343,7 +1447,7 @@
         // Converts an HSV color value to RGB.
         // *Assumes:* h is contained in [0, 1] or [0, 360] and s and v are contained in [0, 1] or [0, 100]
         // *Returns:* { r, g, b } in the set [0, 255]
-         function hsvToRgb(h, s, v) {
+        function hsvToRgb(h, s, v) {
 
             h = bound01(h, 360) * 6;
             s = bound01(s, 100);
@@ -1402,16 +1506,17 @@
         // Thanks to less.js for some of the basics here
         // <https://github.com/cloudhead/less.js/blob/master/lib/less/functions.js>
 
-
         tinycolor.desaturate = function (color, amount) {
+            amount = (amount === 0) ? 0 : (amount || 10);
             var hsl = tinycolor(color).toHsl();
-            hsl.s -= ((amount || 10) / 100);
+            hsl.s -= amount / 100;
             hsl.s = clamp01(hsl.s);
             return tinycolor(hsl);
         };
         tinycolor.saturate = function (color, amount) {
+            amount = (amount === 0) ? 0 : (amount || 10);
             var hsl = tinycolor(color).toHsl();
-            hsl.s += ((amount || 10) / 100);
+            hsl.s += amount / 100;
             hsl.s = clamp01(hsl.s);
             return tinycolor(hsl);
         };
@@ -1419,14 +1524,16 @@
             return tinycolor.desaturate(color, 100);
         };
         tinycolor.lighten = function(color, amount) {
+            amount = (amount === 0) ? 0 : (amount || 10);
             var hsl = tinycolor(color).toHsl();
-            hsl.l += ((amount || 10) / 100);
+            hsl.l += amount / 100;
             hsl.l = clamp01(hsl.l);
             return tinycolor(hsl);
         };
         tinycolor.darken = function (color, amount) {
+            amount = (amount === 0) ? 0 : (amount || 10);
             var hsl = tinycolor(color).toHsl();
-            hsl.l -= ((amount || 10) / 100);
+            hsl.l -= amount / 100;
             hsl.l = clamp01(hsl.l);
             return tinycolor(hsl);
         };
@@ -1499,6 +1606,7 @@
             return ret;
         };
 
+
         // Readability Functions
         // ---------------------
         // <http://www.w3.org/TR/AERT#color-contrast>
@@ -1514,9 +1622,9 @@
             var brightnessB = (b.r * 299 + b.g * 587 + b.b * 114) / 1000;
             var colorDiff = (
                 Math.max(a.r, b.r) - Math.min(a.r, b.r) +
-                Math.max(a.g, b.g) - Math.min(a.g, b.g) +
-                Math.max(a.b, b.b) - Math.min(a.b, b.b)
-            );
+                    Math.max(a.g, b.g) - Math.min(a.g, b.g) +
+                    Math.max(a.b, b.b) - Math.min(a.b, b.b)
+                );
 
             return {
                 brightness: Math.abs(brightnessA - brightnessB),
@@ -1736,6 +1844,17 @@
             return flipped;
         }
 
+        // Return a valid alpha value [0,1] with all invalid values being set to 1
+        function boundAlpha(a) {
+            a = parseFloat(a);
+
+            if (isNaN(a) || a < 0 || a > 1) {
+                a = 1;
+            }
+
+            return a;
+        }
+
         // Take input from [0, n] and return it as [0, 1]
         function bound01(n, max) {
             if (isOnePointZero(n)) { n = "100%"; }
@@ -1832,7 +1951,7 @@
                 named = true;
             }
             else if (color == 'transparent') {
-                return { r: 0, g: 0, b: 0, a: 0 };
+                return { r: 0, g: 0, b: 0, a: 0, format: "name" };
             }
 
             // Try to match string input using regular expressions.
@@ -1875,9 +1994,11 @@
             return false;
         }
 
-        root.tinycolor = tinycolor;
+        // Expose tinycolor to window, does not need to run in non-browser context.
+        window.tinycolor = tinycolor;
 
-    })(this);
+    })();
+
 
     $(function () {
         if ($.fn.spectrum.load) {
