@@ -1,4 +1,4 @@
-// Spectrum Colorpicker v1.2.0
+// Spectrum Colorpicker v1.3.1
 // https://github.com/bgrins/spectrum
 // Author: Brian Grinstead
 // License: MIT
@@ -29,6 +29,7 @@
             maxSelectionSize: 7,
             cancelText: "cancel",
             chooseText: "choose",
+            clearText: "Clear Color Selection",
             preferredFormat: false,
             className: "",
             showAlpha: false,
@@ -86,7 +87,7 @@
                 "</div>",
                 "</div>",
                 "</div>",
-                "<div class='sp-clear sp-clear-display' title='Clear Color Selection'>",
+                "<div class='sp-clear sp-clear-display'>",
                 "</div>",
                 "<div class='sp-hue'>",
                 "<div class='sp-slider'></div>",
@@ -170,8 +171,8 @@
             currentSaturation = 0,
             currentValue = 0,
             currentAlpha = 1,
-            palette = opts.palette.slice(0),
-            paletteArray = $.isArray(palette[0]) ? palette : [palette],
+            palette = [],
+            paletteArray = [],
             selectionPalette = opts.selectionPalette.slice(0),
             maxSelectionSize = opts.maxSelectionSize,
             draggingClass = "sp-dragging",
@@ -213,6 +214,11 @@
 
             if (opts.showPaletteOnly) {
                 opts.showPalette = true;
+            }
+
+            if (opts.palette) {
+                palette = opts.palette.slice(0);
+                paletteArray = $.isArray(palette[0]) ? palette : [palette];
             }
 
             container.toggleClass("sp-flat", flat);
@@ -310,20 +316,18 @@
                 hide("cancel");
             });
 
-
+            clearButton.attr("title", opts.clearText);
             clearButton.bind("click.spectrum", function (e) {
                 e.stopPropagation();
                 e.preventDefault();
-
                 isEmpty = true;
-
                 move();
+
                 if(flat) {
                     //for the flat style, this is a change event
                     updateOriginalInput(true);
                 }
             });
-
 
             chooseButton.text(opts.chooseText);
             chooseButton.bind("click.spectrum", function (e) {
@@ -344,11 +348,14 @@
                 }
 
                 move();
-            });
+            }, dragStart, dragStop);
 
             draggable(slider, function (dragX, dragY) {
                 currentHue = parseFloat(dragY / slideHeight);
                 isEmpty = false;
+                if (!opts.showAlpha) {
+                    currentAlpha = 1;
+                }
                 move();
             }, dragStart, dragStop);
 
@@ -377,6 +384,9 @@
                 }
 
                 isEmpty = false;
+                if (!opts.showAlpha) {
+                    currentAlpha = 1;
+                }
 
                 move();
 
@@ -407,8 +417,8 @@
                 }
                 else {
                     set($(this).data("color"));
-                    updateOriginalInput(true);
                     move();
+                    updateOriginalInput(true);
                     hide();
                 }
 
@@ -496,10 +506,12 @@
             }
             container.addClass(draggingClass);
             shiftMovementDirection = null;
+            boundElement.trigger('dragstart.spectrum', [ get() ]);
         }
 
         function dragStop() {
             container.removeClass(draggingClass);
+            boundElement.trigger('dragstop.spectrum', [ get() ]);
         }
 
         function setFromTextInput() {
@@ -508,11 +520,13 @@
 
             if ((value === null || value === "") && allowEmpty) {
                 set(null);
+                updateOriginalInput(true);
             }
             else {
                 var tiny = tinycolor(value);
                 if (tiny.ok) {
                     set(tiny);
+                    updateOriginalInput(true);
                 }
                 else {
                     textInput.addClass("sp-validation-error");
@@ -551,9 +565,6 @@
             replacer.addClass("sp-active");
             container.removeClass("sp-hidden");
 
-            if (opts.showPalette) {
-                drawPalette();
-            }
             reflow();
             updateUI();
 
@@ -600,16 +611,19 @@
 
         function set(color, ignoreFormatChange) {
             if (tinycolor.equals(color, get())) {
+                // Update UI just in case a validation error needs
+                // to be cleared.
+                updateUI();
                 return;
             }
 
-            var newColor;
+            var newColor, newHsv;
             if (!color && allowEmpty) {
                 isEmpty = true;
             } else {
                 isEmpty = false;
                 newColor = tinycolor(color);
-                var newHsv = newColor.toHsv();
+                newHsv = newColor.toHsv();
 
                 currentHue = (newHsv.h % 360) / 360;
                 currentSaturation = newHsv.s;
@@ -661,7 +675,7 @@
 
             // Get a format that alpha will be included in (hex and names ignore alpha)
             var format = currentPreferredFormat;
-            if (currentAlpha < 1) {
+            if (currentAlpha < 1 && !(currentAlpha === 0 && format === "name")) {
                 if (format === "hex" || format === "hex3" || format === "hex6" || format === "name") {
                     format = "rgb";
                 }
@@ -704,12 +718,15 @@
                         alphaSliderInner.css("background", "-webkit-" + gradient);
                         alphaSliderInner.css("background", "-moz-" + gradient);
                         alphaSliderInner.css("background", "-ms-" + gradient);
-                        alphaSliderInner.css("background", gradient);
+                        // Use current syntax gradient on unprefixed property.
+                        alphaSliderInner.css("background",
+                            "linear-gradient(to right, " + realAlpha + ", " + realHex + ")");
                     }
                 }
 
                 displayColor = realColor.toString(format);
             }
+
             // Update the text entry input as it changes happen
             if (opts.showInput) {
                 textInput.val(displayColor);
@@ -750,19 +767,19 @@
                     Math.min(dragHeight - dragHelperHeight, dragY - dragHelperHeight)
                 );
                 dragHelper.css({
-                    "top": dragY,
-                    "left": dragX
+                    "top": dragY + "px",
+                    "left": dragX + "px"
                 });
 
                 var alphaX = currentAlpha * alphaWidth;
                 alphaSlideHelper.css({
-                    "left": alphaX - (alphaSlideHelperWidth / 2)
+                    "left": (alphaX - (alphaSlideHelperWidth / 2)) + "px"
                 });
 
                 // Where to show the bar that displays your current selected hue
                 var slideY = (currentHue) * slideHeight;
                 slideHelper.css({
-                    "top": slideY - slideHelperHeight
+                    "top": (slideY - slideHelperHeight) + "px"
                 });
             }
         }
@@ -772,7 +789,7 @@
                 displayColor = '',
                 hasChanged = !tinycolor.equals(color, colorOnShow);
 
-            if(color) {
+            if (color) {
                 displayColor = color.toString(currentPreferredFormat);
                 // Update the selection palette with the current color
                 addColorToSelectionPalette(color);
@@ -806,6 +823,12 @@
             }
 
             updateHelperLocations();
+
+            if (opts.showPalette) {
+                drawPalette();
+            }
+
+            boundElement.trigger('reflow.spectrum');
         }
 
         function destroy() {
@@ -971,6 +994,7 @@
                 onmove.apply(element, [dragX, dragY, e]);
             }
         }
+
         function start(e) {
             var rightclick = (e.which) ? (e.which == 3) : (e.button == 2);
             var touches = e.originalEvent.touches;
@@ -993,6 +1017,7 @@
                 }
             }
         }
+
         function stop() {
             if (dragging) {
                 $(doc).unbind(duringDragEvents);
@@ -1018,7 +1043,6 @@
         };
     }
 
-
     function log(){/* jshint -W021 */if(window.console){if(Function.prototype.bind)log=Function.prototype.bind.call(console.log,console);else log=function(){Function.prototype.apply.call(console.log,console,arguments);};log.apply(this,arguments);}}
 
     /**
@@ -1035,7 +1059,6 @@
             this.each(function () {
                 var spect = spectrums[$(this).data(dataID)];
                 if (spect) {
-
                     var method = spect[opts];
                     if (!method) {
                         throw new Error( "Spectrum: no such method: '" + opts + "'" );
@@ -1065,7 +1088,8 @@
 
         // Initializing a new instance of spectrum
         return this.spectrum("destroy").each(function () {
-            var spect = spectrum(this, opts);
+            var options = $.extend({}, opts, $(this).data());
+            var spect = spectrum(this, options);
             $(this).data(dataID, spect.id);
         });
     };
@@ -1087,7 +1111,7 @@
         }
     };
 
-    // TinyColor v0.9.16
+    // TinyColor v0.9.17
     // https://github.com/bgrins/TinyColor
     // 2013-08-10, Brian Grinstead, MIT License
 
@@ -1166,7 +1190,13 @@
                     return rgbToHex(r, g, b, allow3Char);
                 },
                 toHexString: function(allow3Char) {
-                    return '#' + rgbToHex(r, g, b, allow3Char);
+                    return '#' + this.toHex(allow3Char);
+                },
+                toHex8: function() {
+                    return rgbaToHex(r, g, b, a);
+                },
+                toHex8String: function() {
+                    return '#' + this.toHex8();
                 },
                 toRgb: function() {
                     return { r: mathRound(r), g: mathRound(g), b: mathRound(b), a: a };
@@ -1192,19 +1222,16 @@
                     return hexNames[rgbToHex(r, g, b, true)] || false;
                 },
                 toFilter: function(secondColor) {
-                    var hex = rgbToHex(r, g, b);
-                    var secondHex = hex;
-                    var alphaHex = Math.round(parseFloat(a) * 255).toString(16);
-                    var secondAlphaHex = alphaHex;
+                    var hex8String = '#' + rgbaToHex(r, g, b, a);
+                    var secondHex8String = hex8String;
                     var gradientType = opts && opts.gradientType ? "GradientType = 1, " : "";
 
                     if (secondColor) {
                         var s = tinycolor(secondColor);
-                        secondHex = s.toHex();
-                        secondAlphaHex = Math.round(parseFloat(s.alpha) * 255).toString(16);
+                        secondHex8String = s.toHex8String();
                     }
 
-                    return "progid:DXImageTransform.Microsoft.gradient("+gradientType+"startColorstr=#" + pad2(alphaHex) + hex + ",endColorstr=#" + pad2(secondAlphaHex) + secondHex + ")";
+                    return "progid:DXImageTransform.Microsoft.gradient("+gradientType+"startColorstr="+hex8String+",endColorstr="+secondHex8String+")";
                 },
                 toString: function(format) {
                     var formatSet = !!format;
@@ -1225,6 +1252,9 @@
                     }
                     if (format === "hex3") {
                         formattedString = this.toHexString(true);
+                    }
+                    if (format === "hex8") {
+                        formattedString = this.toHex8String();
                     }
                     if (format === "name") {
                         formattedString = this.toName();
@@ -1272,6 +1302,7 @@
         //     "red"
         //     "#f00" or "f00"
         //     "#ff0000" or "ff0000"
+        //     "#ff000000" or "ff000000"
         //     "rgb 255 0 0" or "rgb (255, 0, 0)"
         //     "rgb 1.0 0 0" or "rgb (1, 0, 0)"
         //     "rgba (255, 0, 0, 1)" or "rgba 255, 0, 0, 1"
@@ -1483,6 +1514,21 @@
             if (allow3Char && hex[0].charAt(0) == hex[0].charAt(1) && hex[1].charAt(0) == hex[1].charAt(1) && hex[2].charAt(0) == hex[2].charAt(1)) {
                 return hex[0].charAt(0) + hex[1].charAt(0) + hex[2].charAt(0);
             }
+
+            return hex.join("");
+        }
+        // `rgbaToHex`
+        // Converts an RGBA color plus alpha transparency to hex
+        // Assumes r, g, b and a are contained in the set [0, 255]
+        // Returns an 8 character hex
+        function rgbaToHex(r, g, b, a) {
+
+            var hex = [
+                pad2(convertDecimalToHex(a)),
+                pad2(mathRound(r).toString(16)),
+                pad2(mathRound(g).toString(16)),
+                pad2(mathRound(b).toString(16))
+            ];
 
             return hex.join("");
         }
@@ -1882,8 +1928,8 @@
             return mathMin(1, mathMax(0, val));
         }
 
-        // Parse an integer into hex
-        function parseHex(val) {
+        // Parse a base-16 hex value into a base-10 integer
+        function parseIntFromHex(val) {
             return parseInt(val, 16);
         }
 
@@ -1912,6 +1958,15 @@
             return n;
         }
 
+        // Converts a decimal to a hex value
+        function convertDecimalToHex(d) {
+            return Math.round(parseFloat(d) * 255).toString(16);
+        }
+        // Converts a hex value to a decimal
+        function convertHexToDecimal(h) {
+            return (parseIntFromHex(h) / 255);
+        }
+
         var matchers = (function() {
 
             // <http://www.w3.org/TR/css3-values/#integers>
@@ -1936,7 +1991,8 @@
                 hsla: new RegExp("hsla" + PERMISSIVE_MATCH4),
                 hsv: new RegExp("hsv" + PERMISSIVE_MATCH3),
                 hex3: /^([0-9a-fA-F]{1})([0-9a-fA-F]{1})([0-9a-fA-F]{1})$/,
-                hex6: /^([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/
+                hex6: /^([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/,
+                hex8: /^([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/
             };
         })();
 
@@ -1975,19 +2031,28 @@
             if ((match = matchers.hsv.exec(color))) {
                 return { h: match[1], s: match[2], v: match[3] };
             }
+            if ((match = matchers.hex8.exec(color))) {
+                return {
+                    a: convertHexToDecimal(match[1]),
+                    r: parseIntFromHex(match[2]),
+                    g: parseIntFromHex(match[3]),
+                    b: parseIntFromHex(match[4]),
+                    format: named ? "name" : "hex8"
+                };
+            }
             if ((match = matchers.hex6.exec(color))) {
                 return {
-                    r: parseHex(match[1]),
-                    g: parseHex(match[2]),
-                    b: parseHex(match[3]),
+                    r: parseIntFromHex(match[1]),
+                    g: parseIntFromHex(match[2]),
+                    b: parseIntFromHex(match[3]),
                     format: named ? "name" : "hex"
                 };
             }
             if ((match = matchers.hex3.exec(color))) {
                 return {
-                    r: parseHex(match[1] + '' + match[1]),
-                    g: parseHex(match[2] + '' + match[2]),
-                    b: parseHex(match[3] + '' + match[3]),
+                    r: parseIntFromHex(match[1] + '' + match[1]),
+                    g: parseIntFromHex(match[2] + '' + match[2]),
+                    b: parseIntFromHex(match[3] + '' + match[3]),
                     format: named ? "name" : "hex"
                 };
             }
