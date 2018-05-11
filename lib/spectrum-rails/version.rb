@@ -1,5 +1,5 @@
 module Spectrum
   module Rails
-    VERSION = "1.6.2"
+    VERSION = "1.8.0"
   end
 end
