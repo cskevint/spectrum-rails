@@ -2,7 +2,7 @@
 
 A ruby gem that uses the Rails asset pipeline to include the Spectrum jQuery plugin by Brian Grinstead (@bgrins):
 
-* Homepage: http://bgrins.github.com/spectrum/
+* Homepage: http://bgrins.github.io/spectrum/
 * Source Code: https://github.com/bgrins/spectrum
 
 ## Installation
